@@ -66,7 +66,7 @@ Channel 6 contains lightning location data from the Met Office ATDnet (Arrival T
 
 ## License
 
-The code in this repository is released under the [MIT License](LICENSE).
+The code in this repository is released under the [MIT License](LICENSE.txt).
 
 The data samples in `data/` include a channel derived from Met Office ATDnet data, provided under a [CC-BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/). Any derivative work incorporating that channel must comply with the terms of CC-BY-SA 4.0.
 
