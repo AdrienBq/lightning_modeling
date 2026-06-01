@@ -77,3 +77,24 @@ The data samples in `data/` include a channel derived from Met Office ATDnet dat
 If you use this code or data in your work, please cite:
 
 *[Insert BibTeX citation once the preprint is available.]*
+
+```bibtex
+@manual{thunder2025,
+  title  = {thunder: Computation and Visualisation of Atmospheric Convective Parameters},
+  author = {Bartosz Czernecki and Mateusz Taszarek and Piotr Szuster},
+  year   = {2025},
+  note   = {R package version 1.1.5},
+  url    = {https://bczernecki.github.io/thundeR/},
+}
+```
+
+```bibtex
+@article{atdnet2006,
+author = {Gaffard, Catherine and Nash, John and Atkinson, N. and Bennett, Alec and Callaghan, Greg and Hibbett, Eric and Turp, Myles and Schulz, Wolfgang},
+year = {2008},
+month = {01},
+pages = {},
+title = {Observing Lightning Around the Globe from the Surface},
+journal = {The Preprints, 20th Interna-tional Lightning Detection Conference}
+}
+```
