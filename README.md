@@ -28,12 +28,20 @@ This repository is linked to the paper [INSERT PAPER LINK TO PREPRINT ONCE SUBMI
 
 ## Installation
 
-Clone the repository and install the dependencies:
+### uv build (fastest)
 
 ```bash
-git clone [INSERT REPO URL]
-cd [INSERT REPO NAME]
-pip install -r requirements.txt
+git clone git@github.com:AdrienBq/lightning_modelling.git
+cd lightning_modelling
+uv sync
+```
+
+### pip build
+
+```bash
+git clone git@github.com:AdrienBq/lightning_modelling.git
+cd lightning_modelling
+pip install -r requirements.txt #OR pip install .
 ```
 
 ---
