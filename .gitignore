@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.egg-info/
+*.egg
+
+# Cache
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Project-specific (common)
+/dist/
+/build/
+.coverage

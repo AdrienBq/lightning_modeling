@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 import torch
 import matplotlib.pyplot as plt
@@ -7,36 +6,27 @@ import pandas as pd
 import torch.nn as nn
 import json
 import torch.nn.functional as F
-import torch
-import torch.nn as nn
 import xarray as xr
 
+from lightning_modelling.common_path import DATASET_PATH
 
-# Path to the config file (relative or absolute)
-CONFIG_FILE = Path("config.json")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load config
-with open(CONFIG_FILE, "r") as f:
-    config = json.load(f)
-
-# Use the paths
-PAR_DIR = config["PAR_DIR"]
-if PAR_DIR not in sys.path:
-    sys.path.append(PAR_DIR)
-
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-DATASET_PATH = Path(PAR_DIR) / "demo_paper" / "data"
 SCALER_PATH = DATASET_PATH / "scaler" / "scaler_full.pkl"
 CLIMATOLOGY_PATH = DATASET_PATH / "climatology"
 
 DATES = pd.date_range(start="2008-01-02", end="2023-12-31", freq="d")
 
+
 def get_climatology_maps():
     climatology_maps = {}
     for season in ["winter", "spring", "summer", "autumn"]:
-        lightning_clim_ds = xr.open_dataset(CLIMATOLOGY_PATH / f"{season}_climatology_training.nc")
-        climatology_map = torch.tensor(lightning_clim_ds["lightnings"].values, dtype=torch.float32)
+        lightning_clim_ds = xr.open_dataset(
+            CLIMATOLOGY_PATH / f"{season}_climatology_training.nc"
+        )
+        climatology_map = torch.tensor(
+            lightning_clim_ds["lightnings"].values, dtype=torch.float32
+        )
         climatology_map = torch.flip(climatology_map, dims=[0])
         climatology_maps[season] = climatology_map.to(DEVICE)
     return climatology_maps
@@ -65,23 +55,43 @@ class StreamingAUC:
                 self.neg_hist[bin_indices[i]] += 1
 
     def compute(self):
-        self.tpr = np.cumsum(self.pos_hist[::-1]) / self.pos_hist.sum() if self.pos_hist.sum() > 0 else np.zeros_like(self.pos_hist)
-        self.fpr = np.cumsum(self.neg_hist[::-1]) / self.neg_hist.sum() if self.neg_hist.sum() > 0 else np.zeros_like(self.neg_hist)
-        self.precisions = np.cumsum(self.pos_hist[::-1]) / (np.cumsum(self.pos_hist[::-1]) + np.cumsum(self.neg_hist[::-1]) + 1e-10)
-        
+        self.tpr = (
+            np.cumsum(self.pos_hist[::-1]) / self.pos_hist.sum()
+            if self.pos_hist.sum() > 0
+            else np.zeros_like(self.pos_hist)
+        )
+        self.fpr = (
+            np.cumsum(self.neg_hist[::-1]) / self.neg_hist.sum()
+            if self.neg_hist.sum() > 0
+            else np.zeros_like(self.neg_hist)
+        )
+        self.precisions = np.cumsum(self.pos_hist[::-1]) / (
+            np.cumsum(self.pos_hist[::-1]) + np.cumsum(self.neg_hist[::-1]) + 1e-10
+        )
+
         # get the first index where tpr, fpr and precisions are not zero
-        if np.any(self.tpr > 0) and np.any(self.fpr > 0) and np.any(self.precisions > 0):
-            self.first_nonzero_index = np.min([np.argmax(self.tpr > 0), np.argmax(self.fpr > 0), np.argmax(self.precisions > 0)])
+        if (
+            np.any(self.tpr > 0)
+            and np.any(self.fpr > 0)
+            and np.any(self.precisions > 0)
+        ):
+            self.first_nonzero_index = np.min(
+                [
+                    np.argmax(self.tpr > 0),
+                    np.argmax(self.fpr > 0),
+                    np.argmax(self.precisions > 0),
+                ]
+            )
         else:
             self.first_nonzero_index = 0
-        self.tpr = self.tpr[self.first_nonzero_index:]
-        self.fpr = self.fpr[self.first_nonzero_index:]
-        self.precisions = self.precisions[self.first_nonzero_index:]
+        self.tpr = self.tpr[self.first_nonzero_index :]
+        self.fpr = self.fpr[self.first_nonzero_index :]
+        self.precisions = self.precisions[self.first_nonzero_index :]
 
         self.tpr = np.concatenate([[0], self.tpr])
         self.fpr = np.concatenate([[0], self.fpr])
         self.precisions = np.concatenate([[self.precisions[1]], self.precisions])
-        
+
         self.ap = np.trapezoid(self.precisions, self.tpr)
         self.roc_auc = np.trapezoid(self.tpr, self.fpr)
 
@@ -101,7 +111,11 @@ class IoU(nn.Module):
         self.target_card += target.sum()
 
     def compute(self):
-        self.iou = (2 * (self.intersection + self.smooth) / (self.pred_card + self.target_card - self.intersection + self.smooth)).item()
+        self.iou = (
+            2
+            * (self.intersection + self.smooth)
+            / (self.pred_card + self.target_card - self.intersection + self.smooth)
+        ).item()
 
 
 class DeterMetrics:
@@ -138,10 +152,21 @@ class DeterMetrics:
         tp, fp, fn, tn = self.tp, self.fp, self.fn, self.tn
         self.precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         self.recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        self.accuracy = (tp + tn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) > 0 else 0.0
-        self.f1 = 2 * (self.precision * self.recall) / (self.precision + self.recall) if (self.precision + self.recall) > 0 else 0.0
-        tr = (tp + fp) * (tp + fn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) > 0 else 0.0
+        self.accuracy = (
+            (tp + tn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) > 0 else 0.0
+        )
+        self.f1 = (
+            2 * (self.precision * self.recall) / (self.precision + self.recall)
+            if (self.precision + self.recall) > 0
+            else 0.0
+        )
+        tr = (
+            (tp + fp) * (tp + fn) / (tp + fp + fn + tn)
+            if (tp + fp + fn + tn) > 0
+            else 0.0
+        )
         self.ets = (tp - tr) / (tp + fp + fn - tr) if (tp + fp + fn - tr) > 0 else 0.0
+
 
 class FractionalScores:
     def __init__(self, kernel_size=1, n_batches=1, climatology_maps=None):
@@ -157,19 +182,36 @@ class FractionalScores:
 
     def update(self, y_true, y_pred, season=None):
         window = 2 * self.kernel_size + 1
-        random_pred = self.climatology_maps[season].expand(y_pred.shape[0], *self.climatology_maps[season].shape)
-        y_fractions = F.avg_pool2d(y_true.float(), kernel_size=window, stride=1, padding=self.kernel_size)
-        p_fractions = F.avg_pool2d(y_pred.float(), kernel_size=window, stride=1, padding=self.kernel_size)
-        p_fraction_baseline = F.avg_pool2d(random_pred.float(), kernel_size=window, stride=1, padding=self.kernel_size).squeeze()
-        self.squared_diff += ((p_fractions - y_fractions) ** 2).mean().item() / self.n_batches
-        self.squared_diff_baseline += ((p_fraction_baseline - y_fractions) ** 2).mean().item() / self.n_batches
+        random_pred = self.climatology_maps[season].expand(
+            y_pred.shape[0], *self.climatology_maps[season].shape
+        )
+        y_fractions = F.avg_pool2d(
+            y_true.float(), kernel_size=window, stride=1, padding=self.kernel_size
+        )
+        p_fractions = F.avg_pool2d(
+            y_pred.float(), kernel_size=window, stride=1, padding=self.kernel_size
+        )
+        p_fraction_baseline = F.avg_pool2d(
+            random_pred.float(), kernel_size=window, stride=1, padding=self.kernel_size
+        ).squeeze()
+        self.squared_diff += (
+            (p_fractions - y_fractions) ** 2
+        ).mean().item() / self.n_batches
+        self.squared_diff_baseline += (
+            (p_fraction_baseline - y_fractions) ** 2
+        ).mean().item() / self.n_batches
 
     def compute(self):
         self.fbs = self.squared_diff
-        self.fbss = 1 - self.squared_diff / self.squared_diff_baseline if self.squared_diff_baseline > 0 else 0.0
+        self.fbss = (
+            1 - self.squared_diff / self.squared_diff_baseline
+            if self.squared_diff_baseline > 0
+            else 0.0
+        )
+
 
 class DevianceScore:
-    def __init__(self, climatology_maps, reduction='mean', n_batches=1):
+    def __init__(self, climatology_maps, reduction="mean", n_batches=1):
         self.dev_hat = 0.0
         self.dev_null = 0.0
         self.score = 0.0
@@ -183,30 +225,44 @@ class DevianceScore:
     def update(self, y_true, y_pred_probas, batch_size, season=None):
         # random_pred is a tensor of same shape as y_true filled with the constant value self.random_proba
         # random_pred = torch.ones_like(y_true) * self.random_proba
-        random_pred = self.climatology_maps[season].expand(batch_size, *self.climatology_maps[season].shape).flatten()
+        random_pred = (
+            self.climatology_maps[season]
+            .expand(batch_size, *self.climatology_maps[season].shape)
+            .flatten()
+        )
 
-        self.log_losses_hat.append(F.binary_cross_entropy(
-            y_pred_probas, y_true, reduction=self.reduction
-        ).item())
+        self.log_losses_hat.append(
+            F.binary_cross_entropy(
+                y_pred_probas, y_true, reduction=self.reduction
+            ).item()
+        )
 
-        self.log_losses_null.append(F.binary_cross_entropy(
-            random_pred, y_true, reduction=self.reduction
-        ).item())
+        self.log_losses_null.append(
+            F.binary_cross_entropy(random_pred, y_true, reduction=self.reduction).item()
+        )
 
     def compute(self):
-        if self.reduction == 'mean':
-            log_loss_hat = sum(self.log_losses_hat) / self.n_batches 
-            log_loss_null = sum(self.log_losses_null) / self.n_batches 
+        if self.reduction == "mean":
+            log_loss_hat = sum(self.log_losses_hat) / self.n_batches
+            log_loss_null = sum(self.log_losses_null) / self.n_batches
         else:
             log_loss_hat = sum(self.log_losses_hat)
             log_loss_null = sum(self.log_losses_null)
         self.dev_hat = 2 * log_loss_hat
         self.dev_null = 2 * log_loss_null
         self.score = 1 - self.dev_hat / self.dev_null if self.dev_null > 0 else 0.0
-    
+
 
 class Metrics:
-    def __init__(self, save_path, kernel_size=1, reduction='mean', n_batches=1, auc_bins=1000, extremes=False):
+    def __init__(
+        self,
+        save_path,
+        kernel_size=1,
+        reduction="mean",
+        n_batches=1,
+        auc_bins=1000,
+        extremes=False,
+    ):
         self.save_path = save_path
         self.extremes = extremes
         self.climatology_maps = get_climatology_maps()
@@ -216,18 +272,32 @@ class Metrics:
         self.auc_calc = StreamingAUC(n_bins=auc_bins)
         # Fractional scores
         self.iou = IoU()
-        self.fractional_scores = FractionalScores(kernel_size=kernel_size, n_batches=n_batches, climatology_maps=self.climatology_maps)
+        self.fractional_scores = FractionalScores(
+            kernel_size=kernel_size,
+            n_batches=n_batches,
+            climatology_maps=self.climatology_maps,
+        )
         # Deviance score
-        self.deviance_score = DevianceScore(climatology_maps=self.climatology_maps, reduction=reduction, n_batches=n_batches)
+        self.deviance_score = DevianceScore(
+            climatology_maps=self.climatology_maps,
+            reduction=reduction,
+            n_batches=n_batches,
+        )
 
     def update_all(self, y_true, y_pred, season=None):
         self.deter_metrics.update(y_true, y_pred)
         self.iou.update(y_pred.flatten(), y_true.flatten())
         self.auc_calc.update(y_true.flatten(), y_pred.flatten())
-        self.fractional_scores.update(y_true.unsqueeze(1), y_pred.unsqueeze(1), season=season)
-        self.deviance_score.update(y_true.flatten(), y_pred.flatten(), y_true.shape[0], season=season)
+        self.fractional_scores.update(
+            y_true.unsqueeze(1), y_pred.unsqueeze(1), season=season
+        )
+        self.deviance_score.update(
+            y_true.flatten(), y_pred.flatten(), y_true.shape[0], season=season
+        )
 
-    def compute_all(self,):
+    def compute_all(
+        self,
+    ):
         self.deter_metrics.compute()
         self.auc_calc.compute()
         self.iou.compute()
@@ -236,19 +306,29 @@ class Metrics:
 
     def print(self):
         print("Metrics Summary:")
-        print("-"*40)
+        print("-" * 40)
 
         print("    Deterministic Metrics:")
-        print(f"Precision: {self.deter_metrics.precision:.3f}                | Recall: {self.deter_metrics.recall:.5f}")
-        print(f"F1: {self.deter_metrics.f1:.5f}                     | Accuracy: {self.deter_metrics.accuracy:.3f}")
+        print(
+            f"Precision: {self.deter_metrics.precision:.3f}                | Recall: {self.deter_metrics.recall:.5f}"
+        )
+        print(
+            f"F1: {self.deter_metrics.f1:.5f}                     | Accuracy: {self.deter_metrics.accuracy:.3f}"
+        )
         print(f"ETS: {self.deter_metrics.ets:.5f}")
-        print("-"*40)
+        print("-" * 40)
 
         print("    Probabilistic Metrics:")
-        print(f"ROC AUC: {self.auc_calc.roc_auc:.3f}                  | Average Precision: {self.auc_calc.ap:.4f}")
-        print(f"Deviance: {self.deviance_score.score:.3f}                 | Intersection over Union: {self.iou.iou:.5f}")
-        print(f"Fractional Brier Score: {self.fractional_scores.fbs:.5f} | Fractional Brier Skill Score: {self.fractional_scores.fbss:.5f}")
-        print("-"*40)                    
+        print(
+            f"ROC AUC: {self.auc_calc.roc_auc:.3f}                  | Average Precision: {self.auc_calc.ap:.4f}"
+        )
+        print(
+            f"Deviance: {self.deviance_score.score:.3f}                 | Intersection over Union: {self.iou.iou:.5f}"
+        )
+        print(
+            f"Fractional Brier Score: {self.fractional_scores.fbs:.5f} | Fractional Brier Skill Score: {self.fractional_scores.fbss:.5f}"
+        )
+        print("-" * 40)
 
         print("    Total Counts:")
         print(f"Total observations: {self.deter_metrics.total_obs.sum()}")
@@ -271,30 +351,41 @@ class Metrics:
             "total_pred": self.deter_metrics.total_pred.sum(),
             "tpr_binned": self.auc_calc.tpr.tolist(),
             "fpr_binned": self.auc_calc.fpr.tolist(),
-            "precision_binned": self.auc_calc.precisions.tolist()
+            "precision_binned": self.auc_calc.precisions.tolist(),
         }
 
         file_name = "metrics_extremes.json" if self.extremes else "metrics.json"
         with open(self.save_path / file_name, "w") as f:
             json.dump(metrics_json, f, indent=4)
-        
 
     def plot_roc_pr_curves(self):
-        print(f'Number of bins for ROC and AP curves : TPR {len(self.auc_calc.tpr)}, FPR {len(self.auc_calc.fpr)}, Precision {len(self.auc_calc.precisions)}')
+        print(
+            f"Number of bins for ROC and AP curves : TPR {len(self.auc_calc.tpr)}, FPR {len(self.auc_calc.fpr)}, Precision {len(self.auc_calc.precisions)}"
+        )
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-        ax1.plot(self.auc_calc.fpr, self.auc_calc.tpr, label=f'ROC-AUC = {self.auc_calc.roc_auc:.3f}')
-        ax1.set_xlabel('False Positive Rate')
-        ax1.set_ylabel('True Positive Rate')
-        ax1.set_title('Receiver Operating Characteristic (ROC) Curve')
+        ax1.plot(
+            self.auc_calc.fpr,
+            self.auc_calc.tpr,
+            label=f"ROC-AUC = {self.auc_calc.roc_auc:.3f}",
+        )
+        ax1.set_xlabel("False Positive Rate")
+        ax1.set_ylabel("True Positive Rate")
+        ax1.set_title("Receiver Operating Characteristic (ROC) Curve")
         ax1.legend()
         ax1.grid(True)
-        ax2.plot(self.auc_calc.tpr, self.auc_calc.precisions, label=f'Average Precision = {self.auc_calc.ap:.3f}')
-        ax2.set_xlabel('Recall')
-        ax2.set_ylabel('Precision')
-        ax2.set_title('Precision-Recall (PR) Curve')
+        ax2.plot(
+            self.auc_calc.tpr,
+            self.auc_calc.precisions,
+            label=f"Average Precision = {self.auc_calc.ap:.3f}",
+        )
+        ax2.set_xlabel("Recall")
+        ax2.set_ylabel("Precision")
+        ax2.set_title("Precision-Recall (PR) Curve")
         ax2.legend()
         ax2.grid(True)
         plt.tight_layout()
-        file_name = "roc_pr_curves_extremes.png" if self.extremes else "roc_pr_curves.png"
+        file_name = (
+            "roc_pr_curves_extremes.png" if self.extremes else "roc_pr_curves.png"
+        )
         fig.savefig(self.save_path / file_name, dpi=300)
         plt.close(fig)

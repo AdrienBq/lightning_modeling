@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lightning-modelling"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "xarray>=2023.0",
+    "netCDF4>=1.6",
+    "h5netcdf>=1.0",
+    "matplotlib>=3.7",
+    "Cartopy>=0.22",
+    "cmocean>=3.0",
+    "scikit-learn==1.7.0",
+    "scipy>=1.10",
+    "xgboost==3.1.1",
+    "pygam>=0.9",
+    "progressbar2>=4.0",
+    "ipython>=8.0",
+    "ipykernel>=6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lightning_modelling"]
