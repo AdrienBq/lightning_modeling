@@ -12,12 +12,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class CustomPTDataset(Dataset):
     def __init__(self, root_dir, sample_ids, **kwargs):
         self.samples_dir = os.path.join(root_dir, "samples")
-        self.sample_files = [
+        self.sample_files = sorted(
             f for f in os.listdir(self.samples_dir) if f.endswith(".pt")
-        ]
+        )
         self.sample_ids = sample_ids
         self.scaler_path = kwargs.get(
-            "scaler_path", os.path.join(root_dir, "scalers", "final", "scaler_full.pkl")
+            "scaler_path", os.path.join(root_dir, "scaler", "scaler_full.pkl")
         )
 
         # Optional: load metadata
@@ -34,6 +34,7 @@ class CustomPTDataset(Dataset):
             import pandas as pd
 
             self.metadata_csv = pd.read_csv(csv_path).iloc[sample_ids]
+        self.transform = None
         if os.path.exists(self.scaler_path):
             with open(self.scaler_path, "rb") as f:
                 scaler = pickle.load(f)
@@ -62,24 +63,16 @@ class CustomPTDataset(Dataset):
             sample_path
         )  # tensor of shape (batch_size, channels, height, width) = (bs, 6, 101, 149)
 
-        # Optional: attach metadata
-        meta_csv = (
-            self.metadata_csv.iloc[idx] if self.metadata_csv is not None else None
-        )
-
         # Apply transforms if any
         if self.transform:
             sample[:, :-1, :, :] = self.normalize(sample[:, :-1, :, :])
 
-        # mask the last channel : if value >= 2 put one, zero otherwise
-        # sample[-1] = (sample[-1] >= 2).float()
-
-        return sample  # or return (sample, meta) if needed
+        return sample 
 
 
 def create_train_test(dataset_path, train_years, test_years, **kwargs):
     scaler_path = kwargs.get(
-        "scaler_path", os.path.join(dataset_path, "scalers", "final", "scaler_full.pkl")
+        "scaler_path", os.path.join(dataset_path, "scaler", "scaler_full.pkl")
     )
     season = kwargs.get("season", None)
     full_dataset = CustomPTDataset(

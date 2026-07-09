@@ -96,14 +96,24 @@ class StreamingAUC:
         self.roc_auc = np.trapezoid(self.tpr, self.fpr)
 
 
-class IoU(nn.Module):
+class Dice(nn.Module):
+    """Streaming Dice (a.k.a. F1 / Sørensen-Dice) coefficient over a binary map.
+
+    Accumulates the intersection and the two cardinalities across batches, then
+    computes ``Dice = 2 * (I + s) / (P + T - I + s)`` where ``I`` is the
+    intersection, ``P``/``T`` the predicted/target cardinalities, and ``s`` a
+    smoothing term to avoid division by zero. Note this is the Dice coefficient,
+    not the Jaccard index (IoU): the leading factor of 2 (and the ``- I`` in the
+    denominator) is what distinguishes Dice from IoU.
+    """
+
     def __init__(self, smooth=1e-6):
-        super(IoU, self).__init__()
+        super(Dice, self).__init__()
         self.smooth = smooth
         self.pred_card = 0
         self.target_card = 0
         self.intersection = 0
-        self.iou = 0
+        self.dice = 0
 
     def update(self, pred, target):
         self.intersection += (pred * target).sum()
@@ -111,7 +121,7 @@ class IoU(nn.Module):
         self.target_card += target.sum()
 
     def compute(self):
-        self.iou = (
+        self.dice = (
             2
             * (self.intersection + self.smooth)
             / (self.pred_card + self.target_card - self.intersection + self.smooth)
@@ -271,7 +281,7 @@ class Metrics:
         # ROC and PR AUC
         self.auc_calc = StreamingAUC(n_bins=auc_bins)
         # Fractional scores
-        self.iou = IoU()
+        self.dice = Dice()
         self.fractional_scores = FractionalScores(
             kernel_size=kernel_size,
             n_batches=n_batches,
@@ -286,7 +296,7 @@ class Metrics:
 
     def update_all(self, y_true, y_pred, season=None):
         self.deter_metrics.update(y_true, y_pred)
-        self.iou.update(y_pred.flatten(), y_true.flatten())
+        self.dice.update(y_pred.flatten(), y_true.flatten())
         self.auc_calc.update(y_true.flatten(), y_pred.flatten())
         self.fractional_scores.update(
             y_true.unsqueeze(1), y_pred.unsqueeze(1), season=season
@@ -300,7 +310,7 @@ class Metrics:
     ):
         self.deter_metrics.compute()
         self.auc_calc.compute()
-        self.iou.compute()
+        self.dice.compute()
         self.fractional_scores.compute()
         self.deviance_score.compute()
 
@@ -323,7 +333,7 @@ class Metrics:
             f"ROC AUC: {self.auc_calc.roc_auc:.3f}                  | Average Precision: {self.auc_calc.ap:.4f}"
         )
         print(
-            f"Deviance: {self.deviance_score.score:.3f}                 | Intersection over Union: {self.iou.iou:.5f}"
+            f"Deviance: {self.deviance_score.score:.3f}                 | Dice: {self.dice.dice:.5f}"
         )
         print(
             f"Fractional Brier Score: {self.fractional_scores.fbs:.5f} | Fractional Brier Skill Score: {self.fractional_scores.fbss:.5f}"
@@ -344,7 +354,7 @@ class Metrics:
             "roc_auc": self.auc_calc.roc_auc,
             "average_precision": self.auc_calc.ap,
             "deviance_score": self.deviance_score.score,
-            "IoU": self.iou.iou,
+            "Dice": self.dice.dice,
             "Fractional_Brier_Score": self.fractional_scores.fbs,
             "Fractional_Brier_Skill_Score": self.fractional_scores.fbss,
             "total_obs": self.deter_metrics.total_obs.sum(),

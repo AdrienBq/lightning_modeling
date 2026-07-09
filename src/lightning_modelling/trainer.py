@@ -170,8 +170,10 @@ class Trainer(ABC):
         if hasattr(self.model, "recalibration_method"):
             if self.model.recalibration_method == "platt_scaling":
                 self.platt_recalibration()
-            elif self.model.recalibration_method == "histogram_binning":
-                self.histogram_binning_recalibration()
+            else:
+                print(
+                    f"Recalibration method {self.model.recalibration_method} not implemented. Defaulting to no recalibration."
+                )
         else:
             print(
                 "No valid recalibration method specified in the model. Defaulting to no recalibration."
@@ -262,13 +264,14 @@ class Trainer(ABC):
         print(f"Testing model {self.model.name} on {n_batches} batches........")
         bs, T, C, H, W = next(iter(loader)).shape
         test_start_time = time.time()
+        season = None
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 if self.test_early_stopping and i >= self.n_early:
                     break
                 if self.seasons is not None:
                     season = self.seasons[i]
-                if i + 1 % 100 == 0:
+                if (i + 1) % 100 == 0:
                     print(
                         f"{i}/{min(n_batches, len(loader))}, test duration : {time.time() - test_start_time}"
                     )
