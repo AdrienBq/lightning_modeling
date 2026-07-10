@@ -1,12 +1,8 @@
 import os
 import pandas as pd
-
-
 import torch
 from torch.utils.data import Dataset
 import pickle
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class CustomPTDataset(Dataset):
@@ -31,8 +27,6 @@ class CustomPTDataset(Dataset):
             with open(json_path, "r") as f:
                 self.metadata_json = json.load(f)
         if os.path.exists(csv_path):
-            import pandas as pd
-
             self.metadata_csv = pd.read_csv(csv_path).iloc[sample_ids]
         self.transform = None
         if os.path.exists(self.scaler_path):
@@ -143,40 +137,6 @@ def create_train_test(dataset_path, train_years, test_years, **kwargs):
     )
 
     return full_dataset, train_dataset, test_dataset
-
-
-def create_train_val_test(dataset_path, train_years, val_years, test_years, **kwargs):
-    scaler_path = kwargs.get(
-        "scaler_path", os.path.join(dataset_path, "scalers", "scaler_final.pkl")
-    )
-    full_dataset = CustomPTDataset(
-        root_dir=dataset_path, sample_ids=range(5843), scaler_path=scaler_path
-    )
-
-    metadata = full_dataset.metadata_csv.copy()
-    metadata["year"] = metadata["date"].astype(str).str[:4].astype(int)
-
-    train_ids = metadata.loc[metadata["year"].isin(train_years), "id"].values
-    val_ids = metadata.loc[metadata["year"].isin(val_years), "id"].values
-    test_ids = metadata.loc[metadata["year"].isin(test_years), "id"].values
-
-    # assert len(set(train_ids) & set(val_ids)) == 0
-    assert len(set(train_ids) & set(test_ids)) == 0
-    assert len(set(val_ids) & set(test_ids)) == 0
-
-    train_dataset = CustomPTDataset(
-        root_dir=dataset_path, sample_ids=train_ids, scaler_path=scaler_path
-    )
-
-    validation_dataset = CustomPTDataset(
-        root_dir=dataset_path, sample_ids=val_ids, scaler_path=scaler_path
-    )
-
-    test_dataset = CustomPTDataset(
-        root_dir=dataset_path, sample_ids=test_ids, scaler_path=scaler_path
-    )
-
-    return full_dataset, train_dataset, validation_dataset, test_dataset
 
 
 def get_seasons(years):

@@ -1,8 +1,6 @@
-from pathlib import Path
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import torch.nn as nn
 import json
 import torch.nn.functional as F
@@ -12,10 +10,7 @@ from lightning_modelling.common_path import DATASET_PATH
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-SCALER_PATH = DATASET_PATH / "scaler" / "scaler_full.pkl"
 CLIMATOLOGY_PATH = DATASET_PATH / "climatology"
-
-DATES = pd.date_range(start="2008-01-02", end="2023-12-31", freq="d")
 
 
 def get_climatology_maps():
@@ -233,8 +228,6 @@ class DevianceScore:
         self.log_losses_null = []
 
     def update(self, y_true, y_pred_probas, batch_size, season=None):
-        # random_pred is a tensor of same shape as y_true filled with the constant value self.random_proba
-        # random_pred = torch.ones_like(y_true) * self.random_proba
         random_pred = (
             self.climatology_maps[season]
             .expand(batch_size, *self.climatology_maps[season].shape)
@@ -344,7 +337,7 @@ class Metrics:
         print(f"Total observations: {self.deter_metrics.total_obs.sum()}")
         print(f"Total predictions: {self.deter_metrics.total_pred.sum()}")
 
-    def save(self: Path):
+    def save(self):
         metrics_json = {
             "precision": self.deter_metrics.precision,
             "recall": self.deter_metrics.recall,

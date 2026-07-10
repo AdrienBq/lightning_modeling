@@ -41,8 +41,19 @@ uv sync
 ```bash
 git clone git@github.com:AdrienBq/lightning_modelling.git
 cd lightning_modelling
-pip install -r requirements.txt #OR pip install .
+
+# Portable install (uses the loose version ranges in pyproject.toml; CPU-friendly)
+pip install .
+
+# OR, to reproduce the authors' exact environment (a fully pinned freeze that
+# includes GPU/CUDA wheels — heavier, and intended for a CUDA machine):
+pip install -r requirements.txt
 ```
+
+> **Note:** `pip install .` / `uv sync` and `requirements.txt` are **not** equivalent.
+> The first resolves the loose ranges from `pyproject.toml` and works on CPU-only
+> machines; `requirements.txt` is a full pinned freeze of the authors' GPU environment.
+> The demo notebooks run on CPU, so the portable install is recommended for most users.
 
 ---
 

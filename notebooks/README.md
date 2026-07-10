@@ -14,7 +14,7 @@ They are then plotted similarly to what is show for the three examples in the pa
 ---
 ## 02 - Evaluate Models
 
-The second notebook is used to evaluate the models on the extreme events. It is a reproduction of Table 5 in the paper, except that here we do it for every model and not just the U-Net.
+The second notebook is used to evaluate the models on the extreme events. It is a reproduction of the "Tail" columns of Figure 3 in the paper.
 
 ---
 ## 03 Interpretability

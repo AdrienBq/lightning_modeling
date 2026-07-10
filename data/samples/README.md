@@ -1,6 +1,6 @@
 # Data Samples
 
-This folder contains tensor samples (`.pt` files) used for model training and evaluation. It consists of the 49 most extreme days of the test dataset. Each sample is a PyTorch tensor with **6 channels** with **24 timesteps**, **101 longitudes** and **149 latitudes** , sourced from two distinct contributors described below.
+This folder contains tensor samples (`.pt` files) used for model training and evaluation. It consists of the 49 most extreme days of the test dataset. Each sample is a PyTorch tensor of shape **(24 timesteps, 6 channels, 101 latitudes, 149 longitudes)**, sourced from two distinct contributors described below.
 
 ---
 

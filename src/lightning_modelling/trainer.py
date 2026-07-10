@@ -3,16 +3,12 @@ from abc import ABC
 import torch
 import torch.nn as nn
 
-# from torchvision.transforms.functional import gaussian_blur
 from torch.optim.lr_scheduler import StepLR
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import time
 
 from lightning_modelling.metrics import Metrics
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 MiB = 1024**2
@@ -39,7 +35,6 @@ class Trainer(ABC):
     def __init__(
         self,
         model: nn.Module,
-        full_dataset=None,
         train_dataloader=None,
         calibration_dataloader=None,
         test_dataloader=None,
@@ -47,24 +42,18 @@ class Trainer(ABC):
     ):
         super().__init__()
         self.model = model
-        self.full_dataset = full_dataset
         self.train_dataloader = train_dataloader
         self.calibration_dataloader = calibration_dataloader
         self.test_dataloader = test_dataloader
         self.test_extremes_dataloader = kwargs.get("test_extremes_dataloader", None)
         self.seasons = kwargs.get("seasons", None)
         self.device = kwargs.get("device", "cpu")
-        self.events_start_date = kwargs.get("events_start_date", None)
-        self.events_start_hour = kwargs.get("events_start_hour", None)
-        self.geopt_path = kwargs.get("geopt_path", None)
-        self.data_path = kwargs.get("data_path", None)
         self.model_name = (
             self.model.name
             if hasattr(self.model, "name")
             else "model_name_not_specified"
         )
         self.eval_path = kwargs.get("eval_path", None)
-        self.n_years = kwargs.get("n_years", 1)
         self.calibration_early_stopping = kwargs.get("calibration_early_stopping", True)
         self.test_early_stopping = kwargs.get("test_early_stopping", False)
         self.n_early = kwargs.get("n_early", 365)  # number
@@ -114,7 +103,6 @@ class Trainer(ABC):
                 if i >= self.batches_per_epoch:
                     break
                 # step 1 : sample a batch of data
-                # batch = next(iter(self.train_dataloader))     # shape (bs, T, c+1, h, w), T = 24
                 batch = batch.view(bs * T, C, H, W)  # shape (bs * T, c+1, h, w)
                 x = batch[:, :-1, :, :].to(self.device)  # shape (bs * T, c, h, w)
                 y = batch[:, -1, :, :].to(self.device)  # shape (bs * T, h, w)
@@ -243,7 +231,6 @@ class Trainer(ABC):
 
     def test(self, extremes=False) -> float:
         """Can be used for test and validation"""
-        start_time = time.time()
         self.model.to(self.device)
         self.model.eval()
         if extremes:
