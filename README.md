@@ -61,19 +61,8 @@ pip install -r requirements.txt
 
 ### Atmospheric convective parameters — thundeR
 
-Channels 1–5 of the input tensors are derived from atmospheric convective parameters computed with the **thundeR** R package:
+Channels 1–5 of the input tensors are derived from atmospheric convective parameters computed with the **thundeR** R package. This postprocessed data was provided by Mateusz Taszarek under contribution from a grant from the Polish National Science Centre (2020/39/D/ST10/00768) and can be made available. Contact him (mateusz.taszarek@amu.edu.pl) for usage information. 
 
-> Czernecki, B., Taszarek, M., & Szuster, P. (2025). *thunder: Computation and Visualisation of Atmospheric Convective Parameters* (R package version 1.1.5). https://bczernecki.github.io/thundeR/
-
-```bibtex
-@manual{thunder2025,
-  title  = {thunder: Computation and Visualisation of Atmospheric Convective Parameters},
-  author = {Bartosz Czernecki and Mateusz Taszarek and Piotr Szuster},
-  year   = {2025},
-  note   = {R package version 1.1.5},
-  url    = {https://bczernecki.github.io/thundeR/},
-}
-```
 
 ### Lightning location data — Met Office ATDnet
 
