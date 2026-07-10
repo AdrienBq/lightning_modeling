@@ -86,7 +86,7 @@ Table-5 numbers over all 49 days, set `EARLY_STOP=False`. Left as-is pending use
 - **Scaler path** — no doc referenced `scalers` (plural); only stale plural is in the dead
   `create_train_val_test` (removed in Step 4). Nothing to fix here.
 
-## ⬜ Step 4 — Dead code removal (src)   ← RESUME HERE
+## ✅ Step 4 — Dead code removal (src)   ← RESUME HERE
 
 - **dataset.py**: remove module-level `device`; remove `create_train_val_test` (never called;
   also carries a broken scaler default); remove redundant local `import pandas as pd`. **KEEP**
@@ -104,7 +104,7 @@ Table-5 numbers over all 49 days, set `EARLY_STOP=False`. Left as-is pending use
   504-505, 582 [582 is a dangling truncated comment]).
 - Verify with `ruff`/`pyflakes` that no live reference was cut.
 
-## ⬜ Step 5 — Dead code removal (notebooks)
+## ✅ Step 5 — Dead code removal (notebooks)
 
 - **nb02 eval-loop cell**: remove `pred_events_maps = []` (unused), `start_time_model` (unread →
   makes `import time` dead, remove that too), unused enumerate index `j`, and commented
