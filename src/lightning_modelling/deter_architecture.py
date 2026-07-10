@@ -125,6 +125,14 @@ class Decoder(nn.Module):
 
 
 class PlattScaling(nn.Module):
+    """Platt scaling recalibration: a learned 1-parameter logistic map.
+
+    Applies ``sigmoid(a * x + b)`` with learnable scale ``a`` and bias ``b`` to
+    rescale a model's logits/scores into better-calibrated probabilities. The
+    parameters are fit on a held-out calibration set (see
+    ``Trainer.platt_recalibration``).
+    """
+
     def __init__(self):
         super().__init__()
         self.a = nn.Parameter(torch.tensor([[1.0]]))  # scale
@@ -136,6 +144,19 @@ class PlattScaling(nn.Module):
 
 
 class HistogramBinning(nn.Module):
+    """DEPRECATED - Histogram-binning recalibration: 
+    Map each score to a per-bin probability.
+
+    Predictions are passed through a sigmoid, bucketed into ``num_bins`` bins
+    defined by ``bin_edges`` (finer near 0 and 1 where lightning probabilities
+    concentrate), and each bin is assigned a calibrated probability learned from
+    the observed positive fraction in that bin.
+
+    INVARIANT: ``num_bins`` must equal ``len(bin_edges)`` (44). ``bin_edges`` is
+    hard-coded to 44 entries here, so overriding ``num_bins`` via kwargs without
+    also changing ``bin_edges`` will break the bin lookup in ``forward``.
+    """
+
     def __init__(self, **kwargs):
         super().__init__()
         self.num_bins = kwargs.get("num_bins", 44)

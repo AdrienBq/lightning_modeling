@@ -28,6 +28,20 @@ def get_climatology_maps():
 
 
 class StreamingAUC:
+    """Streaming ROC-AUC and Average Precision via probability histograms.
+
+    Instead of storing every prediction, ``update`` bins the predicted
+    probabilities into ``n_bins`` and accumulates two histograms — counts of
+    positive and negative pixels per bin. ``compute`` then derives the TPR/FPR
+    and precision curves from the reverse-cumulative sums of those histograms
+    (high-probability bins first) and integrates them with the trapezoidal rule
+    to get ROC-AUC (``roc_auc``) and Average Precision (``ap``).
+
+    Before integrating, the leading all-zero portion of the curves is trimmed
+    (``first_nonzero_index``) and a ``(0, 0)`` origin point is prepended so the
+    trapezoidal integrals are well-defined.
+    """
+
     def __init__(self, n_bins=1000):
         self.n_bins = n_bins
         self.pos_hist = np.zeros(n_bins)
@@ -124,6 +138,18 @@ class Dice(nn.Module):
 
 
 class DeterMetrics:
+    """Deterministic (thresholded) metrics accumulated over batches. 
+    These metrics are computed but not used for evaluation.
+
+    Predictions are binarised at 0.5 to accumulate the confusion-matrix counts
+    (tp/fp/fn/tn), from which ``compute`` derives precision, recall, accuracy,
+    F1, and the Equitable Threat Score (``ets``). ETS corrects the plain threat
+    score for the hits expected by chance: ``tr = (tp+fp)(tp+fn)/N`` is the
+    random-hit term and ``ets = (tp - tr) / (tp + fp + fn - tr)``. It also keeps
+    running spatial sums of observations and predictions (``total_obs`` /
+    ``total_pred``) over the 101x149 grid.
+    """
+
     def __init__(self):
         self.tp = 0
         self.fp = 0
@@ -174,6 +200,16 @@ class DeterMetrics:
 
 
 class FractionalScores:
+    """Fractions Brier Score (FBS) and Fractions Brier Skill Score (FBSS).
+
+    Neighbourhood-based verification: observations and predictions are converted
+    to fractional coverage with an ``avg_pool2d`` over a ``(2*kernel_size+1)``
+    window, and the mean squared difference of those fractions is accumulated as
+    the FBS (``fbs``). The same is computed against a climatology reference to
+    get a baseline; the skill score ``fbss = 1 - FBS / FBS_baseline`` (``fbss``)
+    is positive when the model beats climatology and 0 otherwise.
+    """
+
     def __init__(self, kernel_size=1, n_batches=1, climatology_maps=None):
         # Hyperparameters
         self.n_batches = n_batches
@@ -216,6 +252,15 @@ class FractionalScores:
 
 
 class DevianceScore:
+    """Deviance skill score relative to a climatology null model.
+
+    Accumulates the binary cross-entropy (log loss) of the model's predictions
+    (``dev_hat``) and of a climatology reference prediction (``dev_null``, the
+    per-season climatology probability map used as the null model). ``compute``
+    turns these into a skill score (``score``): 0 means no better than
+    climatology, 1 means a perfect fit — analogous to a deviance-explained R^2.
+    """
+
     def __init__(self, climatology_maps, reduction="mean", n_batches=1):
         self.dev_hat = 0.0
         self.dev_null = 0.0

@@ -10,6 +10,16 @@ import cmocean
 
 
 class LightningPlotMultiModel:
+    """Side-by-side map comparison of observed vs per-model predicted lightning.
+
+    Given ``lightning_hours`` of shape ``(1 + n_models, H, W)`` (row 0 is the
+    observation, the rest are model predictions), builds a multi-panel Cartopy
+    figure over the study domain and annotates each panel with its RMSE. Call
+    ``.show()`` to render or ``.save()`` to write it to disk. Colours, contour
+    ``levels`` and the domain extent are configured here as constants (the map
+    extent ``[-5, 20, 30, 55]`` is lon/lat degrees, a crop of the full domain).
+    """
+
     def __init__(self, lightning_hours, metadata_json, title, **kwargs):
         self.lightning_hours = lightning_hours
         self.json_metadata = metadata_json
@@ -283,6 +293,15 @@ def compute_1d_power_spectrum(image):
 
 
 class SaliencyPlotPaper:
+    """Saliency (input-gradient) map for one model at a chosen grid point.
+
+    Computes the gradient of the model's prediction at target cell
+    ``(lat, lon)`` with respect to each input channel, and plots those
+    attribution maps over the study domain — showing which predictors and
+    locations most influence the prediction at that point. Uses the same domain
+    extent ``[-5, 20, 30, 55]`` (lon/lat degrees) as the other map plots.
+    """
+
     def __init__(
         self,
         input,

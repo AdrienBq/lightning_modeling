@@ -1,3 +1,18 @@
+"""PyTorch ``nn.Module`` wrappers around the paper's fitted models.
+
+Each wrapper adapts an already-fitted estimator (scikit-learn logistic
+regression, XGBoost, or pyGAM) so it can be called like a network on a batch of
+gridded inputs of shape ``(B, C, H, W)`` and returns per-pixel lightning
+probabilities of shape ``(B, H, W)``.
+
+Feature-ablation convention (``remove_vars``): an optional list of feature
+channel indices in ``0..4`` to ablate before inference. Used for SHAP values analysis.
+- ``None`` or empty  -> use all five feature channels.
+- ``len < 5``        -> drop the listed channels, keep the rest.
+- ``len == 5``       -> replace the input with a single all-ones channel
+  (a constant baseline with no real predictors).
+"""
+
 from typing import List
 import torch
 import torch.nn as nn
@@ -5,6 +20,9 @@ import pickle
 
 
 class BaselineModel(nn.Module):
+    """Climatology baseline: ignores the input features and returns the
+    precomputed seasonal climatology map for the requested ``season``."""
+
     def __init__(self, maps_dic: dict, name: str = "climatology_baseline", **kwargs):
         super().__init__()
         self.maps = nn.ParameterDict(
@@ -29,6 +47,9 @@ class BaselineModel(nn.Module):
 
 
 class LogisticRegressionModel(nn.Module):
+    """Wraps a fitted scikit-learn ``LogisticRegression``. See the module
+    docstring for the ``remove_vars`` feature-ablation convention."""
+
     def __init__(
         self,
         model,
@@ -68,6 +89,9 @@ class LogisticRegressionModel(nn.Module):
 
 
 class XGBoostModel(nn.Module):
+    """Wraps a fitted XGBoost classifier. See the module docstring for the
+    ``remove_vars`` feature-ablation convention."""
+
     def __init__(
         self,
         model,
@@ -107,6 +131,9 @@ class XGBoostModel(nn.Module):
 
 
 class GAMModel(nn.Module):
+    """Wraps a fitted pyGAM model. See the module docstring for the
+    ``remove_vars`` feature-ablation convention."""
+
     def __init__(
         self, model, name: str = "gam_model", remove_vars: List[int] = None, **kwargs
     ):

@@ -5,7 +5,24 @@ from torch.utils.data import Dataset
 import pickle
 
 
+# Number of days in the full original dataset (2008-01-02 .. 2023-12-31). Only a
+# subset of these samples is shipped with the demo (the 49 extreme days); the
+# full-length range is still used to build the id-indexed metadata below.
+N_TOTAL_DAYS = 5843
+
+
 class CustomPTDataset(Dataset):
+    """Dataset of daily gridded samples stored as ``.pt`` tensors.
+
+    Each item is a tensor of shape ``(24, 6, 101, 149)`` = (hours, channels,
+    latitudes, longitudes); channels 0-4 are predictors and channel 5 is the
+    lightning observation. Items are addressed by position in the sorted list of
+    available ``.pt`` files, i.e. ``sample_files[sample_ids[idx]]`` — note the
+    demo ships only the 49 extreme-day files, so ``sample_ids`` are positional
+    indices into that list. If a scaler exists at ``scaler_path`` it is applied
+    to the predictor channels in ``__getitem__``.
+    """
+
     def __init__(self, root_dir, sample_ids, **kwargs):
         self.samples_dir = os.path.join(root_dir, "samples")
         self.sample_files = sorted(
@@ -65,12 +82,21 @@ class CustomPTDataset(Dataset):
 
 
 def create_train_test(dataset_path, train_years, test_years, **kwargs):
+    """Build (full, train, test) datasets split by year.
+
+    Loads the full metadata, assigns each day to the train or test split by its
+    year, and optionally restricts to a single meteorological ``season``
+    (``"summer"``, ``"winter"``, ``"spring"``, ``"autumn"``, or
+    ``None``/``"all"`` for no filter). Returns three ``CustomPTDataset`` objects:
+    the full dataset, the train split, and the test split. Recognised
+    ``kwargs``: ``scaler_path`` (path to the fitted scaler) and ``season``.
+    """
     scaler_path = kwargs.get(
         "scaler_path", os.path.join(dataset_path, "scaler", "scaler_full.pkl")
     )
     season = kwargs.get("season", None)
     full_dataset = CustomPTDataset(
-        root_dir=dataset_path, sample_ids=range(5843), scaler_path=scaler_path
+        root_dir=dataset_path, sample_ids=range(N_TOTAL_DAYS), scaler_path=scaler_path
     )
 
     metadata = full_dataset.metadata_csv.copy()
@@ -140,10 +166,19 @@ def create_train_test(dataset_path, train_years, test_years, **kwargs):
 
 
 def get_seasons(years):
+    """Return the meteorological season label for every day in ``years``.
+
+    Produces a flat list (one entry per day, chronologically) mapping each day
+    to ``"winter"``, ``"spring"``, ``"summer"``, or ``"autumn"`` by month. The
+    per-day labels line up with the metadata ``id`` order, so they can be
+    indexed by sample id to stratify metrics by season.
+    """
     validation_dates = pd.concat(
         [
             pd.Series(
                 pd.date_range(
+                    # The dataset starts on 2008-01-02, so 2008 begins a day
+                    # late; every other year starts on Jan 1st.
                     f"{y}-01-02" if y == 2008 else f"{y}-01-01",
                     f"{y}-12-31",
                     freq="D",
