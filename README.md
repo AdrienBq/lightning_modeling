@@ -6,7 +6,7 @@ This repository is linked to the paper [INSERT PAPER LINK TO PREPRINT ONCE SUBMI
 
 ## Abstract
 
-*[Insert abstract here once submitted.]*
+Most lightning parameterization schemes rely on local approaches where the predictors are the atmospheric variables in the same grid cell as the output. To validate the hypothesis that large-scale thunderstorm clusters – such as mesoscale convective systems – are driven by broad spatial predictor patterns, we model lightning occurrence using architectures capable of processing surrounding grid-cell data rather than relying solely on local point-based inputs. This study develops a deep convolutional neural network (U-Net) to model lightning occurrence across Europe using ERA5 reanalysis data. The model is trained on 13 years of data and evaluated with a leave-one-year-out cross-validation strategy. We compare the performance of the U-Net to several local machine learning models of increasing complexity, including logistic regression, generalized additive model, extreme gradient boosting, and multi-layer perceptron. We find that the U-Net outperforms all single grid cell models in overall performance and on the most extreme events. Through a feature importance study, we find that the most important predictors depend on the model type. Finally we show with a spatial sensitivity study that the U-Net captures mesoscale patterns driving lightning occurrence.
 
 ---
 
@@ -84,7 +84,17 @@ The data samples in `data/` include a channel derived from Met Office ATDnet dat
 
 If you use this code or data in your work, please cite:
 
-*[Insert BibTeX citation once the preprint is available.]*
+```bibtex
+@article{Burq2026,
+  title = {From logistic regression to deep learning: machine learning modeling of lightning in ERA5 reanalysis data},
+  url = {http://dx.doi.org/10.5194/egusphere-2026-4363},
+  DOI = {10.5194/egusphere-2026-4363},
+  publisher = {Copernicus GmbH},
+  author = {Burq,  Adrien and Vrac,  Mathieu and Jouhaud,  Jean and Xing,  Victor and Bouvier,  Victor and Forcadell,  Vincent and Taszarek,  Mateusz and Faranda,  Davide},
+  year = {2026},
+  month = Aug 
+}
+```
 
 ```bibtex
 @manual{thunder2025,
