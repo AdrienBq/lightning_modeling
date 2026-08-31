@@ -1,6 +1,6 @@
 # From logistic regression to deep learning : machine learning modeling of lightnings in reanalysis data
 
-This repository is linked to the paper [INSERT PAPER LINK TO PREPRINT ONCE SUBMITTED].
+This repository is linked to this paper : https://egusphere.copernicus.org/preprints/2026/egusphere-2026-4363/.
 
 ---
 
